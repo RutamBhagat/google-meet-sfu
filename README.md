@@ -11,11 +11,11 @@ A full-stack WebRTC video conferencing application with live HLS streaming capab
 
 ## Assignment Requirements Fulfilled
 
-✅ **Page 1: `stream`** - Multi-user WebRTC video conferencing  
-✅ **Page 2: `watch`** - Live HLS streaming with DVR functionality  
-✅ **User Journey**: Users can video conference on `/stream`, viewers can watch live on `/watch`  
-✅ **No Blackbox Solutions**: Uses Mediasoup SFU (not LiveKit)  
-✅ **Functional Locally**: Complete local development setup
+**Page 1: `stream`** - Multi-user WebRTC video conferencing  
+**Page 2: `watch`** - Live HLS streaming with DVR functionality  
+**User Journey**: Users can video conference on `/stream`, viewers can watch live on `/watch`  
+**No Blackbox Solutions**: Uses Mediasoup SFU (not LiveKit)  
+**Functional Locally**: Complete local development setup
 
 ## Key Technical Features
 
