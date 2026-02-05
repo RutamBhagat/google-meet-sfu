@@ -4,8 +4,9 @@ A full-stack WebRTC video conferencing application with live HLS streaming capab
 
 ## Demo & Links
 
+https://github.com/user-attachments/assets/1ab65ba5-6fb1-4db9-99ad-ae4dd5d64fc5
+
 - **GitHub**: https://github.com/RutamBhagat/fermion-task
-- **Video Demo**: https://drive.google.com/file/d/1eB_D3mIyDQxyEp4gjj7IhXkRNfF77hIW/view?usp=sharing
 - **Frontend**: https://fermion-task-web.vercel.app/stream
 - **Backend**: https://ec2-3-110-48-224.ap-south-1.compute.amazonaws.com
 
