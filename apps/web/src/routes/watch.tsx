@@ -1,5 +1,5 @@
 import { Badge } from "@google-meet-sfu/ui/components/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@google-meet-sfu/ui/components/card";
+import { Card, CardContent } from "@google-meet-sfu/ui/components/card";
 import { createFileRoute } from "@tanstack/react-router";
 import Hls from "hls.js";
 import { useEffect, useRef, useState } from "react";
@@ -44,28 +44,23 @@ function WatchRoute() {
   }, []);
 
   return (
-    <main className="container mx-auto grid max-w-5xl gap-4 px-4 py-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold">Watch</h1>
-          <p className="text-sm text-muted-foreground">HLS playback from the server program feed.</p>
-        </div>
+    <main className="flex h-svh flex-col overflow-hidden bg-[oklch(0.105_0.01_260)] text-[oklch(0.96_0.006_250)]">
+      <div className="flex h-16 shrink-0 items-center justify-between px-7">
+        <span className="text-sm font-medium">
+          {new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date())}
+        </span>
         <Badge variant="secondary">{status}</Badge>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Live feed</CardTitle>
-          <CardDescription>{HLS_URL}</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className="relative mx-4 mb-4 flex-1 gap-0 overflow-hidden rounded-3xl bg-[oklch(0.19_0.055_264)] py-0 ring-1 ring-white/5">
+        <CardContent className="absolute inset-0 px-0">
           <video
             ref={videoRef}
             controls
             autoPlay
             muted
             playsInline
-            className="aspect-video w-full bg-muted object-contain"
+            className="h-full w-full bg-muted object-cover"
           />
         </CardContent>
       </Card>

@@ -13,7 +13,7 @@ export function StreamVideo({ stream, muted }: { stream?: MediaStream; muted?: b
       autoPlay
       playsInline
       muted={muted}
-      className="aspect-video w-full bg-muted object-cover"
+      className="h-full w-full bg-muted object-cover"
     />
   );
 }
