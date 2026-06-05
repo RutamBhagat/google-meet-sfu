@@ -113,6 +113,9 @@
       },
     },
   },
+  "trustedDependencies": [
+    "mediasoup",
+  ],
   "catalog": {
     "@types/node": "^22.13.14",
     "@types/react": "^19.2.15",
