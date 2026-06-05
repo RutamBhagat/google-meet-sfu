@@ -36,6 +36,70 @@ function StreamRoute() {
     let sendTransport: MediasoupTypes.Transport | undefined;
     let recvTransport: MediasoupTypes.Transport | undefined;
     const consumed = new Set<string>();
+    let isProgramPeer = false;
+    let programStarted = false;
+    let programFrame = 0;
+    let programAudio: AudioContext | undefined;
+    let programStream: MediaStream | undefined;
+    const programProducers: MediasoupTypes.Producer[] = [];
+
+    async function startProgramFeed(remote: MediaStream) {
+      if (!isProgramPeer || programStarted || !local || !sendTransport) return;
+      if (!local.getVideoTracks()[0] || !remote.getVideoTracks()[0]) return;
+      programStarted = true;
+
+      const localVideo = document.createElement("video");
+      localVideo.srcObject = local;
+      localVideo.muted = true;
+      localVideo.playsInline = true;
+      await localVideo.play();
+
+      const remoteVideo = document.createElement("video");
+      remoteVideo.srcObject = remote;
+      remoteVideo.muted = true;
+      remoteVideo.playsInline = true;
+      await remoteVideo.play();
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 1280;
+      canvas.height = 720;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("canvas unavailable");
+
+      const draw = () => {
+        context.fillStyle = "#000";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(localVideo, 0, 0, 640, 720);
+        context.drawImage(remoteVideo, 640, 0, 640, 720);
+        programFrame = requestAnimationFrame(draw);
+      };
+      draw();
+
+      programAudio = new AudioContext();
+      const destination = programAudio.createMediaStreamDestination();
+      for (const track of [
+        ...local.getAudioTracks(),
+        ...remote.getAudioTracks(),
+      ]) {
+        const source = programAudio.createMediaStreamSource(
+          new MediaStream([track]),
+        );
+        source.connect(destination);
+      }
+
+      programStream = new MediaStream([
+        canvas.captureStream(30).getVideoTracks()[0],
+        destination.stream.getAudioTracks()[0],
+      ]);
+
+      for (const track of programStream.getTracks()) {
+        const producer = await sendTransport.produce({
+          track,
+          appData: { program: true, source: `program-${track.kind}` },
+        });
+        programProducers.push(producer);
+      }
+    }
 
     async function run() {
       await signaling.ready();
@@ -47,6 +111,11 @@ function StreamRoute() {
         rtpCapabilitiesSchema,
       );
       await device.load({ routerRtpCapabilities });
+      const initialProducers = await signaling.request(
+        { action: "listProducers" },
+        producerListSchema,
+      );
+      isProgramPeer = initialProducers.length === 0;
 
       local = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -146,13 +215,15 @@ function StreamRoute() {
         );
         const consumer = await transport.consume(data);
         const peerId = producer.appData?.peerId ?? producer.id;
+        let remote: MediaStream | undefined;
         setRemoteStreams((current) => {
           const next = new Map(current);
-          const stream = next.get(peerId) ?? new MediaStream();
-          stream.addTrack(consumer.track);
-          next.set(peerId, stream);
+          remote = next.get(peerId) ?? new MediaStream();
+          remote.addTrack(consumer.track);
+          next.set(peerId, remote);
           return next;
         });
+        await startProgramFeed(remote!);
         await signaling.request(
           { action: "resumeConsumer", consumerId: consumer.id },
           nullResponseSchema,
@@ -160,11 +231,7 @@ function StreamRoute() {
       }
 
       signaling.onProducer = consume;
-      const producers = await signaling.request(
-        { action: "listProducers" },
-        producerListSchema,
-      );
-      await Promise.all(producers.map(consume));
+      await Promise.all(initialProducers.map(consume));
       setStatus("connected");
     }
 
@@ -175,6 +242,10 @@ function StreamRoute() {
 
     return () => {
       closed = true;
+      if (programFrame) cancelAnimationFrame(programFrame);
+      void programAudio?.close();
+      programStream?.getTracks().forEach((track) => track.stop());
+      programProducers.forEach((producer) => producer.close());
       local?.getTracks().forEach((track) => track.stop());
       sendTransport?.close();
       recvTransport?.close();
