@@ -2,6 +2,9 @@ import { cors } from "@elysiajs/cors";
 import { node } from "@elysiajs/node";
 import { env } from "@google-meet-sfu/env/server";
 import { Elysia } from "elysia";
+import { createRoom } from "./mediasoup/room";
+
+const room = await createRoom();
 
 new Elysia({ adapter: node() })
   .use(
@@ -10,7 +13,7 @@ new Elysia({ adapter: node() })
       methods: ["GET", "POST", "OPTIONS"],
     }),
   )
-  .get("/", () => "OK")
+  .get("/", () => `OK worker:${room.worker.pid} router:${room.router.id}`)
   .listen(3000, () => {
     console.log("Server is running on http://localhost:3000");
   });
