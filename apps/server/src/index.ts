@@ -3,6 +3,7 @@ import { node } from "@elysiajs/node";
 import { env } from "@google-meet-sfu/env/server";
 import { Elysia } from "elysia";
 import { createRoom } from "./mediasoup/room";
+import { createSignalingPlugin } from "./signaling";
 
 const room = await createRoom();
 
@@ -14,6 +15,7 @@ new Elysia({ adapter: node() })
     }),
   )
   .get("/", () => `OK worker:${room.worker.pid} router:${room.router.id}`)
+  .use(createSignalingPlugin(room))
   .listen(3000, () => {
     console.log("Server is running on http://localhost:3000");
   });
