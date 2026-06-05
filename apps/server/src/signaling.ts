@@ -1,3 +1,4 @@
+import type { node } from "@elysiajs/node";
 import { Elysia } from "elysia";
 import { startHlsIfReady } from "./hls";
 import type { Room } from "./mediasoup/room";
@@ -9,8 +10,8 @@ import {
 
 const sockets = new Set<SignalingSocket>();
 
-export function createSignalingPlugin(room: Room) {
-  return new Elysia({ name: "signaling" }).ws("/ws", {
+export function createSignalingPlugin(room: Room, adapter: ReturnType<typeof node>) {
+  return new Elysia({ name: "signaling", adapter }).ws("/ws", {
     open(ws) {
       const peer = {
         id: crypto.randomUUID(),
