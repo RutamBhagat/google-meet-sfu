@@ -19,6 +19,50 @@ export const Route = createFileRoute("/stream")({
   component: StreamRoute,
 });
 
+async function getMissingMediaDevices() {
+  if (!navigator.mediaDevices?.enumerateDevices) {
+    return ["camera", "microphone"];
+  }
+
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  return [
+    devices.some((device) => device.kind === "videoinput") ? undefined : "camera",
+    devices.some((device) => device.kind === "audioinput") ? undefined : "microphone",
+  ].filter((device) => device !== undefined);
+}
+
+async function assertRequiredMediaDevices() {
+  const missing = await getMissingMediaDevices();
+  if (missing.length) {
+    throw new Error(
+      `No ${missing.join(" or ")} found. Connect the missing device, then rejoin.`,
+    );
+  }
+}
+
+async function describeGetUserMediaFailure(reason: unknown) {
+  if (!(reason instanceof DOMException)) {
+    return reason instanceof Error ? reason.message : String(reason);
+  }
+
+  if (reason.name === "NotFoundError") {
+    const missing = await getMissingMediaDevices();
+    return missing.length
+      ? `No ${missing.join(" or ")} found. Connect the missing device, then rejoin. (${reason.name})`
+      : `No camera or microphone matched the requested constraints. (${reason.name})`;
+  }
+
+  if (reason.name === "NotAllowedError") {
+    return `Camera or microphone permission was denied. Allow access in your browser/site settings, then rejoin. (${reason.name})`;
+  }
+
+  if (reason.name === "NotReadableError") {
+    return `Camera or microphone exists, but the browser could not open it. Close other apps using it, then rejoin. (${reason.name})`;
+  }
+
+  return `${reason.name}: ${reason.message}`;
+}
+
 function StreamRoute() {
   const [status, setStatus] = useState("joining room");
   const [localStream, setLocalStream] = useState<MediaStream>();
@@ -102,6 +146,9 @@ function StreamRoute() {
     }
 
     async function run() {
+      await assertRequiredMediaDevices();
+      if (closed) return;
+
       await signaling.ready();
       if (closed) return;
 
@@ -117,10 +164,14 @@ function StreamRoute() {
       );
       isProgramPeer = initialProducers.length === 0;
 
-      local = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+      try {
+        local = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+      } catch (reason) {
+        throw new Error(await describeGetUserMediaFailure(reason));
+      }
       if (closed) return;
       setLocalStream(local);
 
