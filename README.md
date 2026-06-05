@@ -1,75 +1,123 @@
-# google-meet-sfu
+# Google Meet SFU
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Router, Elysia, and more.
+A local WebRTC video-room prototype using mediasoup as an SFU, with a React web app for joining a call and an HLS watcher page for viewing a composed program feed.
 
-## Features
+https://github.com/user-attachments/assets/f06be2f9-2c85-4ac0-bcda-ec909afe8b83
 
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Router** - File-based routing with full type safety
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Elysia** - Type-safe, high-performance framework
-- **Node.js** - Runtime environment
-- **Turborepo** - Optimized monorepo build system
+## What This Does
+
+This repo experiments with a small Google Meet-style media pipeline:
+
+- `/stream` joins a WebRTC room, publishes local camera/microphone, and consumes another peer.
+- The first peer creates a side-by-side "program" feed from its local stream plus the first remote stream.
+- The server receives that program feed through mediasoup and uses FFmpeg to write HLS segments.
+- `/watch` plays the generated HLS playlist with `hls.js`.
+
+## Tech Stack
+
+- **Runtime/package manager**: Bun workspace monorepo
+- **Build orchestration**: Turborepo
+- **Web app**: Vite, React, TanStack Router, Tailwind CSS
+- **Media**: mediasoup, mediasoup-client, WebRTC, HLS, FFmpeg
+- **Server**: Elysia with WebSocket signaling and CORS
+- **Shared packages**: local UI components, env validation, shared TypeScript config
+
+## Project Structure
+
+```text
+apps/
+  server/   Elysia API, WebSocket signaling, mediasoup room, HLS output
+  web/      React routes for streaming and watching
+packages/
+  config/   shared TypeScript config
+  env/      typed server/web environment variables
+  ui/       shared UI components and styles
+```
+
+## Prerequisites
+
+- Bun `1.3.4` or newer
+- FFmpeg available on your `PATH`
+- A browser with camera/microphone access
+
+## Environment
+
+Create a root `.env` file:
+
+```env
+CORS_ORIGIN=http://localhost:3001
+VITE_SERVER_URL=http://localhost:3000
+```
+
+> Note: the current signaling and HLS URLs in the web app target `localhost:3000`, and the mediasoup transport announced address is also local. This setup is intended for local development.
 
 ## Getting Started
 
-First, install the dependencies:
+Install dependencies:
 
 ```bash
 bun install
 ```
 
-Then, run the development server:
+Run the server and web app:
 
 ```bash
 bun run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser to see the web application.
-The API is running at [http://localhost:3000](http://localhost:3000).
-
-## UI Customization
-
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
-
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
-
-### Add more shared components
-
-Run this from the project root to add more primitives to the shared UI package:
+Or run them separately:
 
 ```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+bun run dev:server
+bun run dev:web
 ```
 
-Import shared components like this:
+Then open:
 
-```tsx
-import { Button } from "@google-meet-sfu/ui/components/button";
+- Web app: <http://localhost:3001>
+- Stream page: <http://localhost:3001/stream>
+- HLS watch page: <http://localhost:3001/watch>
+- Server health check: <http://localhost:3000>
+
+## How to Try the Demo
+
+1. Start the server and web app.
+2. Open `/stream` in one browser tab/window and allow camera/microphone access.
+3. Open `/stream` in a second browser tab/window and allow camera/microphone access.
+4. Open `/watch` to view the generated HLS program feed.
+
+The HLS playlist and segments are written under `.temp/hls` while the stream is active.
+
+## Useful Scripts
+
+```bash
+bun run dev          # run all dev tasks through Turbo
+bun run build        # build all workspaces
+bun run check-types  # type-check/build validation
+bun run dev:web      # run only the Vite app
+bun run dev:server   # run only the Elysia server
 ```
 
-### Add app-specific blocks
+## How It Works
 
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
+1. The web client connects to `ws://localhost:3000/ws`.
+2. The server creates mediasoup WebRTC transports for sending and receiving media.
+3. Clients produce camera/microphone tracks and consume other peers' producers.
+4. The first peer builds a composed canvas/audio program feed and produces it back into the SFU.
+5. The server detects the program audio/video producers, creates plain RTP consumers, writes an SDP file, and starts FFmpeg.
+6. FFmpeg converts the RTP input into an HLS playlist served from `/hls/live.m3u8`.
 
-## Project Structure
+## Current Limitations
 
+- Localhost-oriented network configuration.
+- Single in-memory mediasoup room.
+- No auth, room IDs, persistence, or production deployment setup.
+- HLS starts only after the program audio and video producers exist.
+
+## Validation
+
+The current repo passes:
+
+```bash
+bun run check-types
 ```
-google-meet-sfu/
-├── apps/
-│   ├── web/         # Frontend application (React + TanStack Router)
-│   └── server/      # Backend API (Elysia)
-├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
-```
-
-## Available Scripts
-
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:web`: Start only the web application
-- `bun run dev:server`: Start only the server
-- `bun run check-types`: Check TypeScript types across all apps
