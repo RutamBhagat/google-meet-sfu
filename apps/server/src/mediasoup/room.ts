@@ -1,5 +1,6 @@
 import * as mediasoup from "mediasoup";
 import type { types as MediasoupTypes } from "mediasoup";
+import type { HlsSession } from "../hls";
 import { mediaCodecs } from "./codecs";
 
 export type Peer = {
@@ -16,6 +17,7 @@ export type Room = {
   transports: Map<string, MediasoupTypes.WebRtcTransport>;
   producers: Map<string, MediasoupTypes.Producer>;
   consumers: Map<string, MediasoupTypes.Consumer>;
+  hls: HlsSession;
 };
 
 export async function createRoom(): Promise<Room> {
@@ -35,5 +37,6 @@ export async function createRoom(): Promise<Room> {
     transports: new Map(),
     producers: new Map(),
     consumers: new Map(),
+    hls: { started: false, transports: [], consumers: [] },
   };
 }

@@ -1,4 +1,5 @@
 import { Elysia } from "elysia";
+import { startHlsIfReady } from "./hls";
 import type { Room } from "./mediasoup/room";
 import {
   signalingMessageSchema,
@@ -117,6 +118,7 @@ async function handleMessage(
         kind: producer.kind,
         appData: producer.appData,
       });
+      await startHlsIfReady(room);
       return { id: producer.id };
     }
 
