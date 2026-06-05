@@ -1,5 +1,6 @@
 import { cors } from "@elysiajs/cors";
 import { node } from "@elysiajs/node";
+import { openapi } from "@elysiajs/openapi";
 import { env } from "@google-meet-sfu/env/server";
 import { Elysia } from "elysia";
 import { createRoom } from "./mediasoup/room";
@@ -12,6 +13,17 @@ new Elysia({ adapter: node() })
     cors({
       origin: env.CORS_ORIGIN,
       methods: ["GET", "POST", "OPTIONS"],
+    }),
+  )
+  .use(
+    openapi({
+      provider: "scalar",
+      documentation: {
+        info: {
+          title: "Google Meet SFU API",
+          version: "1.0.0",
+        },
+      },
     }),
   )
   .get("/", () => `OK worker:${room.worker.pid} router:${room.router.id}`)
