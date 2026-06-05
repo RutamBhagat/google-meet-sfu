@@ -28,10 +28,20 @@ export async function startHlsIfReady(room: Room) {
   room.hls.ffmpeg = ffmpeg;
 
   ffmpeg.stderr.on("data", (chunk) => console.log(`[ffmpeg] ${chunk}`.trim()));
-  ffmpeg.on("exit", () => resetSession(room.hls));
+  ffmpeg.on("exit", (code, signal) => {
+    console.log(`[ffmpeg] exited code=${code} signal=${signal}`);
+    void resetSession(room.hls);
+  });
+  audioProducer.observer.once("close", () => stopHls(room.hls));
+  videoProducer.observer.once("close", () => stopHls(room.hls));
 
+  await delay(1000);
   await audio.consumer.resume();
   await video.consumer.resume();
+  await video.consumer.requestKeyFrame();
+  for (const ms of [1000, 2000, 3000]) {
+    setTimeout(() => void video.consumer.requestKeyFrame(), ms);
+  }
   console.log(`HLS started at ${playlistPath}`);
 }
 
@@ -49,11 +59,20 @@ function findProgramProducers(room: Room) {
   };
 }
 
-function resetSession(session: HlsSession) {
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function stopHls(session: HlsSession) {
+  session.ffmpeg?.kill("SIGTERM");
+}
+
+async function resetSession(session: HlsSession) {
   session.started = false;
   session.ffmpeg = undefined;
   for (const consumer of session.consumers) consumer.close();
   for (const transport of session.transports) transport.close();
   session.consumers = [];
   session.transports = [];
+  await resetHlsDir();
 }

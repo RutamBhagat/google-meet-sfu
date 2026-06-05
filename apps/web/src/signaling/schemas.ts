@@ -12,9 +12,11 @@ export const producerInfoSchema = z.object({
   appData: appDataSchema.optional(),
 });
 
-export const newProducerSchema = producerInfoSchema.extend({
+export const newProducerSchema = z.object({
   action: z.literal("newProducer"),
   producerId: z.string(),
+  kind: z.enum(["audio", "video"]),
+  appData: appDataSchema.optional(),
 });
 
 export const wsResponseSchema = z.discriminatedUnion("ok", [

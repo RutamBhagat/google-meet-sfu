@@ -40,6 +40,37 @@ async function assertRequiredMediaDevices() {
   }
 }
 
+function drawVideoCover(
+  context: CanvasRenderingContext2D,
+  video: HTMLVideoElement,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  const sourceWidth = video.videoWidth;
+  const sourceHeight = video.videoHeight;
+  if (!sourceWidth || !sourceHeight) return;
+
+  const scale = Math.max(width / sourceWidth, height / sourceHeight);
+  const cropWidth = width / scale;
+  const cropHeight = height / scale;
+  const cropX = (sourceWidth - cropWidth) / 2;
+  const cropY = (sourceHeight - cropHeight) / 2;
+
+  context.drawImage(
+    video,
+    cropX,
+    cropY,
+    cropWidth,
+    cropHeight,
+    x,
+    y,
+    width,
+    height,
+  );
+}
+
 async function describeGetUserMediaFailure(reason: unknown) {
   if (!(reason instanceof DOMException)) {
     return reason instanceof Error ? reason.message : String(reason);
@@ -113,8 +144,8 @@ function StreamRoute() {
       const draw = () => {
         context.fillStyle = "#000";
         context.fillRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(localVideo, 0, 0, 640, 720);
-        context.drawImage(remoteVideo, 640, 0, 640, 720);
+        drawVideoCover(context, localVideo, 0, 0, 640, 720);
+        drawVideoCover(context, remoteVideo, 640, 0, 640, 720);
         programFrame = requestAnimationFrame(draw);
       };
       draw();
@@ -140,6 +171,8 @@ function StreamRoute() {
         const producer = await sendTransport.produce({
           track,
           appData: { program: true, source: `program-${track.kind}` },
+          encodings: track.kind === "video" ? [{ maxBitrate: 2_500_000 }] : undefined,
+          codecOptions: track.kind === "video" ? { videoGoogleStartBitrate: 2500 } : undefined,
         });
         programProducers.push(producer);
       }
@@ -166,7 +199,7 @@ function StreamRoute() {
 
       try {
         local = await navigator.mediaDevices.getUserMedia({
-          video: true,
+          video: { width: 1280, height: 720, frameRate: 30 },
           audio: true,
         });
       } catch (reason) {
@@ -274,11 +307,11 @@ function StreamRoute() {
           next.set(peerId, remote);
           return next;
         });
-        await startProgramFeed(remote!);
         await signaling.request(
           { action: "resumeConsumer", consumerId: consumer.id },
           nullResponseSchema,
         );
+        await startProgramFeed(remote!);
       }
 
       signaling.onProducer = consume;

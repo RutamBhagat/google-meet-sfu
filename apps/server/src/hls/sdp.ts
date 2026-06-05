@@ -33,8 +33,19 @@ function mediaSdp(
     `m=${kind} ${ports.rtp} RTP/AVPF ${codec.payloadType}`,
     `a=rtcp:${ports.rtcp}`,
     `a=rtpmap:${codec.payloadType} ${codecName}/${codec.clockRate}${channels}`,
+    kind === "video" ? `a=framesize:${codec.payloadType} 1280-720` : undefined,
+    kind === "video" ? "a=framerate:30" : undefined,
+    ssrcLine(rtpParameters),
     fmtp ? `a=fmtp:${codec.payloadType} ${fmtp}` : undefined,
+    "a=recvonly",
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function ssrcLine(rtpParameters: MediasoupTypes.RtpParameters) {
+  const ssrc = rtpParameters.encodings?.[0]?.ssrc;
+  if (!ssrc) return undefined;
+  const cname = rtpParameters.rtcp?.cname;
+  return cname ? `a=ssrc:${ssrc} cname:${cname}` : `a=ssrc:${ssrc}`;
 }

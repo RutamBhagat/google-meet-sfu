@@ -19,11 +19,18 @@ function WatchRoute() {
     if (!video) return;
 
     if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(HLS_URL);
+      const hls = new Hls({
+        liveSyncDuration: 10,
+        liveMaxLatencyDuration: 30,
+      });
       hls.attachMedia(video);
+      hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(HLS_URL));
       hls.on(Hls.Events.MANIFEST_PARSED, () => setStatus("playing with hls.js"));
-      hls.on(Hls.Events.ERROR, () => setStatus("waiting for stream"));
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        setStatus(data.fatal ? "waiting for stream" : data.details);
+        if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+        if (data.fatal && data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+      });
       return () => hls.destroy();
     }
 
@@ -56,6 +63,7 @@ function WatchRoute() {
             ref={videoRef}
             controls
             autoPlay
+            muted
             playsInline
             className="aspect-video w-full bg-muted object-contain"
           />
